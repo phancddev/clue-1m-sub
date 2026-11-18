@@ -43,14 +43,16 @@ async function tick() {
       state.phase = 'done';
       console.log('[poller] DONE — 1,000,000 reached at maxId =', maxId);
     }
-    // Video dry-run "done" không tính — render thật vẫn phải chạy khi chạm mốc.
-    // Fail thì retry mỗi 10 phút, tránh vòng lặp churn.
+  }
+  if (maxId >= ARM_AT && !state.manualRecording) {
+    // Chỉ video có finale 1M (final === true) mới tính "đã có"; dừng sớm/fail
+    // thì quay lại (backoff 10 phút chống churn).
     const v = state.video;
-    const hasRealVideo = v.status === 'done' && v.dry !== true;
+    const hasRealVideo = v.status === 'done' && v.final === true;
     const backoff = v.status === 'failed' && v.finishedAt && Date.now() - v.finishedAt < 600_000;
     if (!hasRealVideo && v.status !== 'rendering' && !backoff) {
       const fn = triggerRender();
-      if (fn) fn({ dry: false }).catch((e) => console.error('[poller] render failed', e));
+      if (fn) fn({}).catch((e) => console.error('[poller] render failed', e));
     }
   }
 
@@ -70,7 +72,7 @@ export function startPoller() {
       save();
     }
     // IDLE 15s | ARMED 1s | DONE 5s (giữ số tươi cho trang live)
-    const iv = state.phase === 'armed' ? 1_000 : state.phase === 'done' ? 5_000 : 15_000;
+    const iv = state.video.status === 'rendering' ? 1_000 : state.phase === 'armed' ? 1_000 : state.phase === 'done' ? 5_000 : maxId >= ARM_AT - 100 ? 1_000 : 15_000;
     globalThis[K] = setTimeout(loop, iv);
   };
   loop();

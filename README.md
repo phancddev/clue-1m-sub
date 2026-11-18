@@ -5,8 +5,8 @@ App độc lập canh mốc **1.000.000 submission** của CLUE OJ (theo `MAX(id
 ## Tính năng
 
 - **Live counter** (odometer kiểu YouTube, VI/EN, private theo token): `/?t=<ACCESS_TOKEN>`
-- **Trang video**: `/video?t=<ACCESS_TOKEN>` — tải MP4/WebM, render lại, dry-run
-- Poll MariaDB qua network nội bộ: IDLE 15s → ARMED (≥999.900) 1s → chạm 1.000.000 **tự quay video** (Playwright quay trang replay 1920×1080 + audio tick/fanfare tự tổng hợp + ffmpeg) rồi đưa link tải
+- **Trang video**: `/video?t=<ACCESS_TOKEN>` — kích hoạt quay trên server, dừng và tải MP4/WebM. Có thể đóng tab rồi mở lại để điều khiển cùng phiên quay
+- Theo dõi submission ID trong MariaDB. Từ 999.991, Playwright tự quay bộ đếm ở 1920×1080. Khi đạt 1.000.000, hệ thống ghi phần kết và xuất video.
 - **Self-heal**: restart qua moments 1M vẫn dựng lại timeline từ DB và render; fail retry mỗi 10 phút
 - Tối ưu CPU: poll là query O(1) (`SELECT MAX(id)`), trang chỉ poll khi tab visible, render 1 lần duy nhất với `cpus: 2`
 
@@ -28,13 +28,14 @@ cp .env.example .env    # điền MYSQL_PASSWORD + ACCESS_TOKEN
 docker compose up -d --build
 ```
 
-Dry-run test pipeline render (không chờ 1M):
+Điều khiển quay tay (quay ngay từ số sub hiện tại, tự chạy finale khi tới 1M):
 
 ```sh
-curl -X POST "http://<host>:8642/api/render?t=<TOKEN>&dry=1"
+curl -X POST "http://<host>:8642/api/render?t=<TOKEN>"              # bắt đầu
+curl -X POST "http://<host>:8642/api/render?t=<TOKEN>&action=stop"  # dừng + lưu
 ```
 
-Render thật chỉ tự kích hoạt khi `MAX(id) >= 1.000.000`; render lại tay: `POST /api/render?t=<TOKEN>`.
+Render thật tự kích hoạt khi `MAX(id) >= 999.991` và quay live đến khi chạm 1.000.000.
 
 ## Yêu cầu DB
 

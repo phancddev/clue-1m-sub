@@ -650,3 +650,7 @@ body.replay, .finale { background: var(--bg); }
 .mcard { background: var(--surface); border-color: var(--border); box-shadow: none; }
 .mcard b { color: var(--fg); }
 .finale-kicker, .mcard .k, .intro-kicker { color: var(--accent); }
+
+body.page > main.page { min-height: calc(100svh - 68px); }
+.language-footer { width: 100%; padding: 18px 5vw; text-align: right; border-top: 1px solid var(--border); }
+.actions [hidden] { display: none; }

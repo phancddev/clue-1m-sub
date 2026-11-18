@@ -8,13 +8,8 @@ import Layout from '../layouts/Layout.astro';
       
     </div>
 
-    <div class="rp-head">
-      <span class="live-chip"><span class="live-dot" aria-hidden="true"></span>LIVE</span>
-      <span id="rpKicker">CLUE OJ</span>
-    </div>
 
     <div id="odometer"></div>
-    <div class="replay-sub" id="rsub"></div>
 
     <div class="intro-card" id="introCard" aria-hidden="true">
       <img class="clue-logo logo-lg" src="/clueoj.svg" alt="" />
@@ -63,7 +58,13 @@ import Layout from '../layouts/Layout.astro';
   }
 
   const R = window.__REPLAY;
-  if (!R) {
+  if (new URLSearchParams(location.search).has('capture')) {
+    $('introCard').hidden = true;
+    $('introCard').style.display = 'none';
+    const odo = createOdometer($('odometer'), { digits: 7, sep: lang === 'vi' ? '.' : ',' });
+    Object.assign(window, { setCaptureCount: (value: number) => odo.set(value) });
+
+  } else if (!R) {
     // Không có dữ liệu inject (ai đó mở trực tiếp) — placeholder rồi kết thúc
     document.documentElement.dataset.noReplay = '1';
     $('rtitle').textContent = 'NO REPLAY DATA';
@@ -73,8 +74,6 @@ import Layout from '../layouts/Layout.astro';
     const target = R.target;
     $('rkicker').textContent = S.site;
     $('rtitle').textContent = S.replayTitle;
-    $('rsub').textContent = fmt(R.meta.startV, lang) + '  →  ' + fmt(target, lang);
-    $('rpKicker').textContent = S.liveCount;
 
     const odo = createOdometer($('odometer'), { digits: 7, sep: lang === 'vi' ? '.' : ',' });
     odo.set(R.meta.startV);

@@ -25,7 +25,7 @@ export interface AppState {
   video: VideoInfo;
 }
 
-export type RenderFn = (opts: { dry: boolean }) => Promise<{ ok: boolean }>;
+export type RenderFn = (opts: { manual: boolean }) => Promise<{ ok: boolean }>;
 
 const STATE_KEY = Symbol.for('clue1m.state');
 const RENDER_KEY = Symbol.for('clue1m.triggerRender');

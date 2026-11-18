@@ -1,6 +1,6 @@
 // Mốc theo MAX(id) (quyết định của user): SELECT MAX(id) là O(1) trên PK
 export const TARGET = 1_000_000;
-export const ARM_AT = 999_900;
+export const ARM_AT = 999_991;
 
 // Kịch bản video (ms)
 export const INTRO = 4200;
@@ -15,7 +15,7 @@ export const FINALE = 8000; // confetti + card sub thứ 1 triệu
  * nên hình + tiếng luôn khớp nhau tuyệt đối.
  */
 export function buildSchedule(rows, { target, dry = false }) {
-  const main = rows.filter((r) => r.id <= target);
+  const main = rows.filter((r) => r.id < target);
   const last10 = main.slice(-10);
   const fast = main.slice(0, Math.max(0, main.length - 10));
 

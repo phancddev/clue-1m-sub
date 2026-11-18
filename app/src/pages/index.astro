@@ -2,11 +2,13 @@
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="CLUE OJ — 1.000.000 Submission Counter">
-  <button slot="aside" class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
   <main class="page" id="main">
     <h1 id="title">SUBMISSION COUNTER</h1>
     <div id="odometer"></div>
   </main>
+  <footer class="language-footer">
+    <button class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
+  </footer>
 </Layout>
 
 <script>

@@ -1,5 +1,5 @@
 import { q, esc } from './db.mjs';
-import { TARGET } from './timeline.mjs';
+import { TARGET, ARM_AT } from './timeline.mjs';
 
 // Lấy ~1100 sub cuối kèm thông tin hiển thị (username, bài, ngôn ngữ)
 export async function fetchTail(fromId) {
@@ -16,7 +16,7 @@ export async function fetchTail(fromId) {
 }
 
 export async function buildRealSchedule() {
-  const rows = await fetchTail(TARGET - 1100);
+  const rows = await fetchTail(ARM_AT);
   const { buildSchedule } = await import('./timeline.mjs');
   return buildSchedule(rows, { target: TARGET, dry: false });
 }

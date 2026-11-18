@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 ---
 <Layout title="CLUE OJ — Video 1.000.000">
-  <button slot="aside" class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
   <main class="page">
     <h1 id="title">Video</h1>
     <p class="subtitle" id="sub"></p>
@@ -12,12 +11,15 @@ import Layout from '../layouts/Layout.astro';
       <div class="actions" id="actions">
         <a class="btn" id="dlMp4" hidden>Tải MP4</a>
         <a class="btn ghost" id="dlWebm" hidden>Tải WebM</a>
-        <button class="btn ghost" id="rerender">Quay lại video</button>
-        <button class="btn ghost" id="dry">Dry-run test</button>
+        <button class="btn ghost" id="start">Kích hoạt quay</button>
+        <button class="btn ghost" id="stop" hidden>Dừng và lưu</button>
       </div>
     </section>
     <a class="back-link" id="backLink" href="/">←</a>
   </main>
+  <footer class="language-footer">
+    <button class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
+  </footer>
 </Layout>
 
 <script>
@@ -38,7 +40,7 @@ import Layout from '../layouts/Layout.astro';
 
   interface VideoInfo {
     status: 'none' | 'rendering' | 'done' | 'failed';
-    dry?: boolean;
+    stopping?: boolean;
     mp4?: string;
     webm?: string;
     error?: string;
@@ -56,6 +58,11 @@ import Layout from '../layouts/Layout.astro';
 
   function renderVideo(v: VideoInfo) {
     const s = S();
+    const recording = v.status === 'rendering';
+    $('start').hidden = recording;
+    $('stop').hidden = !recording;
+    ($('stop') as HTMLButtonElement).disabled = !!v.stopping;
+    $('dlMp4').hidden = $('dlWebm').hidden = v.status !== 'done';
     $('err').hidden = true;
     if (v.status === 'done') {
       setStatus('done', 'MP4 · WebM');
@@ -66,7 +73,7 @@ import Layout from '../layouts/Layout.astro';
       $('dlMp4').textContent = s.videoDoneMp4;
       $('dlWebm').textContent = s.videoDoneWebm;
     } else if (v.status === 'rendering') {
-      setStatus('rendering', s.videoRendering);
+      setStatus('rendering', v.stopping ? (lang === 'vi' ? 'Đang lưu video…' : 'Saving video…') : (lang === 'vi' ? 'Server đang quay' : 'Recording on server'));
       $('dlMp4').hidden = true;
       $('dlWebm').hidden = true;
     } else if (v.status === 'failed') {
@@ -87,8 +94,8 @@ import Layout from '../layouts/Layout.astro';
     $('langToggle').textContent = lang === 'vi' ? 'EN' : 'VI';
     $('title').textContent = s.videoTitle;
     $('sub').textContent = s.site + ' — 1.000.000 submissions';
-    $('rerender').textContent = s.rerender;
-    $('dry').textContent = s.dryrun;
+    $('start').textContent = lang === 'vi' ? 'Kích hoạt quay' : 'Start recording';
+    $('stop').textContent = lang === 'vi' ? 'Dừng và lưu' : 'Stop and save';
     $('backLink').textContent = s.backHome;
     $('backLink').href = withToken('/');
     document.getElementById('brandLink')?.setAttribute('href', withToken('/'));
@@ -112,15 +119,17 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 
-  async function trigger(dry: boolean) {
-    await fetch(withToken(dry ? '/api/render?dry=1' : '/api/render'), { method: 'POST' });
-    lastVideo = { status: 'rendering' };
-    renderVideo(lastVideo);
-    refresh();
+  async function trigger(stop: boolean) {
+    try {
+      const r = await fetch(withToken('/api/render' + (stop ? '?action=stop' : '')), { method: 'POST' });
+      if (!r.ok) throw new Error(String(r.status));
+      await refresh();
+    } catch {
+      setStatus('failed', lang === 'vi' ? 'Lệnh chưa được xác nhận' : 'Command not confirmed');
+    }
   }
-
-  $('rerender').addEventListener('click', () => trigger(false));
-  $('dry').addEventListener('click', () => trigger(true));
+  $('start').addEventListener('click', () => trigger(false));
+  $('stop').addEventListener('click', () => trigger(true));
 
   applyLang();
   refresh();

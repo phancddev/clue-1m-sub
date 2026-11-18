@@ -28,6 +28,7 @@ if (!g[KEY]) {
   } catch {
     /* lần chạy đầu */
   }
+  if (st.video.status === 'rendering') st.video = { status: 'none' };
   g[KEY] = st;
 }
 

@@ -2,18 +2,14 @@ import type { APIRoute } from 'astro';
 import { renderFn } from '../../lib/globals';
 
 export const POST: APIRoute = async ({ url }) => {
-  const dry = url.searchParams.get('dry') === '1';
-  const fn = renderFn();
-  if (!fn) {
-    return new Response(JSON.stringify({ ok: false, error: 'render not loaded' }), {
-      status: 503,
-      headers: { 'content-type': 'application/json' },
-    });
+  if (url.searchParams.has('dry')) return Response.json({ ok: false }, { status: 400 });
+  if (url.searchParams.get('action') === 'stop') {
+    const stop = (globalThis as unknown as Record<symbol, (() => void)>)[Symbol.for('clue1m.stopRecording')];
+    stop?.();
+    return Response.json({ ok: true });
   }
-
-  // Chạy nền; trang /video theo dõi qua /api/state
-  fn({ dry }).catch((e: unknown) => console.error('[api/render]', e));
-  return new Response(JSON.stringify({ ok: true, started: true, dry }), {
-    headers: { 'content-type': 'application/json' },
-  });
+  const start = renderFn();
+  if (!start) return Response.json({ ok: false }, { status: 503 });
+  void start({ manual: true });
+  return Response.json({ ok: true }, { status: 202 });
 };

@@ -12,18 +12,16 @@ import '../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#0f0f0f" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0d2033" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
     <title>{title}</title>
   </head>
   <body class={bodyClass}>
     {bodyClass === 'page' && (
       <header class="topbar">
         <a class="brand" id="brandLink" href="/" aria-label="CLUE OJ">
-          <span class="logo" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M9 6.5l9 5.5-9 5.5z" /></svg>
-          </span>
-          <span class="brand-name">CLUE&nbsp;OJ</span>
+          <img class="clue-logo" src="/clueoj.svg" alt="" />
+          
         </a>
         <slot name="aside" />
       </header>

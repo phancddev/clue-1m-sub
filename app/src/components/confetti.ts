@@ -6,7 +6,7 @@ export function startConfetti(canvas: HTMLCanvasElement, durationMs = 8000): () 
   const W = (canvas.width = canvas.clientWidth || 1920);
   const H = (canvas.height = canvas.clientHeight || 1080);
 
-  const COLORS = ['#ff0033', '#ff4d6a', '#ff8fa3', '#ffd700', '#ffe08a', '#ffffff', '#9aa7ff'];
+  const COLORS = ['#3c9eff', '#fb8b3e', '#a5d6ff', '#ffd700', '#ffe08a', '#ffffff', '#9aa7ff'];
   type Shape = 'rect' | 'ribbon' | 'dot';
 
   interface P {

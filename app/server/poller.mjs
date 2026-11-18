@@ -72,7 +72,7 @@ export function startPoller() {
       save();
     }
     // IDLE 15s | ARMED 1s | DONE 5s (giữ số tươi cho trang live)
-    const iv = state.video.status === 'rendering' ? 1_000 : state.phase === 'armed' ? 1_000 : state.phase === 'done' ? 5_000 : maxId >= ARM_AT - 100 ? 1_000 : 15_000;
+    const iv = state.video.status === 'rendering' ? 1_000 : state.phase === 'armed' ? 1_000 : state.phase === 'done' ? 5_000 : state.maxId >= ARM_AT - 100 ? 1_000 : 15_000;
     globalThis[K] = setTimeout(loop, iv);
   };
   loop();

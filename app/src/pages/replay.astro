@@ -1,0 +1,148 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Replay" bodyClass="replay">
+  <div class="replay-stage" id="stage">
+    <div class="rp-brand" aria-hidden="true">
+      <span class="logo logo-md"><svg viewBox="0 0 24 24"><path d="M9 6.5l9 5.5-9 5.5z" /></svg></span>
+      <span class="rp-brand-name">CLUE OJ</span>
+    </div>
+    <div class="dry-badge" id="dryBadge" hidden>DRY RUN</div>
+
+    <div class="rp-head">
+      <span class="live-chip"><span class="live-dot" aria-hidden="true"></span>LIVE</span>
+      <span id="rpKicker">CLUE OJ</span>
+    </div>
+
+    <div id="odometer"></div>
+    <div class="replay-sub" id="rsub"></div>
+
+    <div class="intro-card" id="introCard" aria-hidden="true">
+      <span class="logo logo-lg"><svg viewBox="0 0 24 24"><path d="M9 6.5l9 5.5-9 5.5z" /></svg></span>
+      <div class="intro-kicker" id="rkicker">CLUE OJ</div>
+      <div class="replay-title" id="rtitle">1.000.000 SUBMISSIONS</div>
+      <div class="intro-sub" id="rintroSub"></div>
+    </div>
+
+    <div class="finale" id="finale">
+      <div class="finale-kicker" id="fk"></div>
+      <div class="finale-banner" id="banner"></div>
+      <div class="mcard" id="mcard"></div>
+    </div>
+
+    <div class="rp-progress" aria-hidden="true"><div id="rpBar"></div></div>
+    <canvas id="confetti"></canvas>
+  </div>
+</Layout>
+
+<script>
+  // Trang deterministic để Playwright quay: đọc window.__REPLAY do render.mjs
+  // inject qua addInitScript, chạy đúng schedule, xong đặt window.__replayDone.
+  import { createOdometer } from '../components/odometer';
+  import { startConfetti } from '../components/confetti';
+  import { STR, fmt, fmtDate } from '../i18n';
+  import type { Lang } from '../i18n';
+
+  const lang: Lang = (new URLSearchParams(location.search).get('lang') as Lang) || 'vi';
+  const S = STR[lang];
+  document.documentElement.lang = lang;
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`#${id} missing`);
+    return el as T;
+  };
+
+  // Fit stage khi xem tay ở viewport nhỏ hơn; recorder 1920×1080 → scale 1.
+  const stage = $('stage');
+  const fit = () => {
+    const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080, 1);
+    stage.style.transform = s < 1 ? `scale(${s})` : '';
+  };
+  window.addEventListener('resize', fit, { passive: true });
+  fit();
+
+  function escapeHtml(s: string): string {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  }
+
+  const R = window.__REPLAY;
+  if (!R) {
+    // Không có dữ liệu inject (ai đó mở trực tiếp) — placeholder rồi kết thúc
+    document.documentElement.dataset.noReplay = '1';
+    $('rtitle').textContent = 'NO REPLAY DATA';
+    $('rintroSub').textContent = 'window.__REPLAY missing — open this page via /api/render';
+    window.__replayDone = true;
+  } else {
+    const target = R.target;
+    $('rkicker').textContent = S.site;
+    $('rtitle').textContent = S.replayTitle;
+    $('rintroSub').textContent = S.subtitle;
+    $('rsub').textContent = fmt(R.meta.startV, lang) + '  →  ' + fmt(target, lang);
+    $('rpKicker').textContent = S.liveCount;
+    if (R.dry) $('dryBadge').hidden = false;
+
+    const odo = createOdometer($('odometer'), { digits: 7, sep: lang === 'vi' ? '.' : ',' });
+    odo.set(R.meta.startV);
+
+    // Banner luôn hiện; card chỉ hiện khi có dữ liệu submission mốc
+    $('fk').textContent = S.millionth;
+    $('banner').textContent = fmt(target, lang);
+    const m = R.meta.millionth;
+    if (m) {
+      const row = (k: string, v: string) => `<div class="row"><span class="k">${k}</span><b>${v}</b></div>`;
+      $('mcard').innerHTML = [
+        m.username ? row(S.millionthBy, escapeHtml(m.username)) : '',
+        m.code
+          ? row(S.millionthProblem, escapeHtml(m.code) + (m.problem_name ? ' — ' + escapeHtml(m.problem_name) : ''))
+          : '',
+        m.lang ? row(S.millionthLang, escapeHtml(m.lang)) : '',
+        m.result ? row(S.millionthResult, escapeHtml(m.result)) : '',
+        m.ts ? row(S.millionthAt, fmtDate(new Date(m.ts * 1000).toISOString(), lang)) : '',
+      ].join('');
+    } else {
+      $('mcard').hidden = true;
+    }
+
+    // Pulse/flash nhẹ trên odometer cho event trọng yếu (w === 3)
+    function pulse() {
+      odo.el.classList.remove('pulse');
+      void odo.el.offsetWidth; // reflow để restart animation
+      odo.el.classList.add('pulse');
+    }
+
+    const events = R.events;
+    const t0 = performance.now();
+    let idx = 0;
+    let introHidden = false;
+    let finaleShown = false;
+    const rpBar = $('rpBar');
+
+    function frame(now: number) {
+      const t = now - t0;
+      while (idx < events.length && events[idx].t <= t) {
+        const ev = events[idx];
+        odo.set(ev.v);
+        if (ev.w === 3) pulse();
+        idx++;
+      }
+      if (!introHidden && t >= R.timings.intro) {
+        introHidden = true;
+        $('introCard').classList.add('hide');
+      }
+      if (!finaleShown && t >= R.timings.finaleStart) {
+        finaleShown = true;
+        $('finale').classList.add('show');
+        startConfetti($('confetti'), Math.max(2500, R.timings.finaleMs - 600));
+      }
+      rpBar.style.transform = `scaleX(${Math.min(1, t / R.totalMs)})`;
+      if (t >= R.totalMs) {
+        rpBar.style.transform = 'scaleX(1)';
+        window.__replayDone = true; // recorder chờ flag này
+        return;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+</script>

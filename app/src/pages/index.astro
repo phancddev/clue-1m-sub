@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { STR } from '../i18n';
+---
+<Layout title="CLUE OJ — 1.000.000 Submission Counter">
+  <button slot="aside" class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
+  <main class="page" id="main">
+    <div class="badge" id="phase">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="phaseText">…</span>
+    </div>
+    <h1 id="title">SUBMISSION COUNTER</h1>
+    <p class="subtitle" id="subtitle"></p>
+    <div id="odometer"></div>
+    <div class="stats">
+      <div class="stat"><div class="label" id="l24"></div><div class="value" id="v24">–</div></div>
+      <div class="stat"><div class="label" id="lrate"></div><div class="value" id="vrate">–</div></div>
+      <div class="stat"><div class="label" id="lrem"></div><div class="value hot" id="vrem">–</div></div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress" role="progressbar" aria-label="progress"><div id="pbar"></div></div>
+    </div>
+    <a class="video-link" id="videoLink" href="/video">
+      <span class="vplay" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.5l9 5.5-9 5.5z" /></svg></span>
+      <span id="videoLinkText">Video</span>
+    </a>
+  </main>
+</Layout>
+
+<script>
+  import { createOdometer } from '../components/odometer';
+  import { STR, fmt } from '../i18n';
+  import type { Lang } from '../i18n';
+
+  const qs = new URLSearchParams(location.search);
+  const token = qs.get('t') ?? '';
+  const withToken = (p: string) => (token ? `${p}${p.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}` : p);
+
+  let lang: Lang = (localStorage.getItem('lang') as Lang) || 'vi';
+  const S = () => STR[lang];
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`#${id} missing`);
+    return el as T;
+  };
+
+  const odoRoot = $('odometer');
+  let odo = createOdometer(odoRoot, { digits: 7, sep: lang === 'vi' ? '.' : ',' });
+  let lastMaxId = -1;
+
+  function applyLang() {
+    localStorage.setItem('lang', lang);
+    document.documentElement.lang = lang;
+    // separator nhóm 3 theo ngôn ngữ (vi '.', en ',') → dựng lại odometer
+    odoRoot.replaceChildren();
+    odo = createOdometer(odoRoot, { digits: 7, sep: lang === 'vi' ? '.' : ',' });
+    if (lastMaxId > 0) odo.set(lastMaxId);
+    $('langToggle').textContent = lang === 'vi' ? 'EN' : 'VI';
+    $('title').textContent = S().title;
+    $('subtitle').textContent = S().subtitle;
+    $('l24').textContent = S().last24h;
+    $('lrate').textContent = S().perHour;
+    $('lrem').textContent = S().remaining;
+    $('videoLink').href = withToken('/video');
+    $('videoLinkText').textContent = S().videoPage;
+    document.getElementById('brandLink')?.setAttribute('href', withToken('/'));
+  }
+
+  $('langToggle').addEventListener('click', () => {
+    lang = lang === 'vi' ? 'en' : 'vi';
+    applyLang();
+  });
+
+  interface CountResp {
+    maxId: number; count: number; last24h: number;
+    phase: 'idle' | 'armed' | 'done'; target: number;
+  }
+
+  async function poll() {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      const r = await fetch(withToken('/api/count'), { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = (await r.json()) as CountResp;
+      if (d.maxId !== lastMaxId) {
+        odo.set(d.maxId);
+        lastMaxId = d.maxId;
+      }
+      $('v24').textContent = fmt(d.last24h, lang);
+      $('vrate').textContent = fmt(Math.round(d.last24h / 24), lang);
+      $('vrem').textContent = fmt(Math.max(0, d.target - d.maxId), lang);
+      const pct = Math.min(100, (d.maxId / d.target) * 100);
+      $('pbar').style.width = `${pct.toFixed(3)}%`;
+      const ph = $('phase');
+      ph.className = 'badge' + (d.phase === 'armed' ? ' armed' : d.phase === 'done' ? ' done' : '');
+      $('phaseText').textContent =
+        d.phase === 'armed' ? S().phaseArmed : d.phase === 'done' ? S().phaseDone : S().phaseIdle;
+    } catch {
+      /* mạng chập chờn — lần poll sau */
+    }
+  }
+
+  applyLang();
+  poll();
+  setInterval(poll, 2000);
+</script>

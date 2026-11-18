@@ -1,0 +1,128 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="CLUE OJ — Video 1.000.000">
+  <button slot="aside" class="lang-toggle" id="langToggle" aria-label="EN / VI">EN</button>
+  <main class="page">
+    <h1 id="title">Video</h1>
+    <p class="subtitle" id="sub"></p>
+    <section class="panel">
+      <div class="status none" id="status">…</div>
+      <pre class="error" id="err" hidden></pre>
+      <div class="actions" id="actions">
+        <a class="btn" id="dlMp4" hidden>Tải MP4</a>
+        <a class="btn ghost" id="dlWebm" hidden>Tải WebM</a>
+        <button class="btn ghost" id="rerender">Quay lại video</button>
+        <button class="btn ghost" id="dry">Dry-run test</button>
+      </div>
+    </section>
+    <a class="back-link" id="backLink" href="/">←</a>
+  </main>
+</Layout>
+
+<script>
+  import { STR } from '../i18n';
+  import type { Lang } from '../i18n';
+
+  const qs = new URLSearchParams(location.search);
+  const token = qs.get('t') ?? '';
+  const withToken = (p: string) => (token ? `${p}${p.includes('?') ? '&' : '?'}t=${encodeURIComponent(token)}` : p);
+  let lang: Lang = (localStorage.getItem('lang') as Lang) || 'vi';
+  const S = () => STR[lang];
+
+  const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`#${id} missing`);
+    return el as T;
+  };
+
+  interface VideoInfo {
+    status: 'none' | 'rendering' | 'done' | 'failed';
+    dry?: boolean;
+    mp4?: string;
+    webm?: string;
+    error?: string;
+    finishedAt?: number;
+  }
+
+  // trạng thái gần nhất, để render lại khi đổi ngôn ngữ
+  let lastVideo: VideoInfo = { status: 'none' };
+
+  function setStatus(cls: string, text: string) {
+    const st = $('status');
+    st.className = 'status ' + cls;
+    st.textContent = text;
+  }
+
+  function renderVideo(v: VideoInfo) {
+    const s = S();
+    $('err').hidden = true;
+    if (v.status === 'done') {
+      setStatus('done', (v.dry ? 'DRY-RUN · ' : '') + 'MP4 · WebM');
+      $('dlMp4').hidden = false;
+      $('dlWebm').hidden = false;
+      $('dlMp4').href = withToken('/api/video?f=mp4');
+      $('dlWebm').href = withToken('/api/video?f=webm');
+      $('dlMp4').textContent = s.videoDoneMp4;
+      $('dlWebm').textContent = s.videoDoneWebm;
+    } else if (v.status === 'rendering') {
+      setStatus('rendering', s.videoRendering);
+      $('dlMp4').hidden = true;
+      $('dlWebm').hidden = true;
+    } else if (v.status === 'failed') {
+      setStatus('failed', s.videoFailed);
+      if (v.error) {
+        $('err').hidden = false;
+        $('err').textContent = v.error;
+      }
+    } else {
+      setStatus('none', s.videoNone);
+    }
+  }
+
+  function applyLang() {
+    localStorage.setItem('lang', lang);
+    document.documentElement.lang = lang;
+    const s = S();
+    $('langToggle').textContent = lang === 'vi' ? 'EN' : 'VI';
+    $('title').textContent = s.videoTitle;
+    $('sub').textContent = s.site + ' — 1.000.000 submissions';
+    $('rerender').textContent = s.rerender;
+    $('dry').textContent = s.dryrun;
+    $('backLink').textContent = s.backHome;
+    $('backLink').href = withToken('/');
+    document.getElementById('brandLink')?.setAttribute('href', withToken('/'));
+    renderVideo(lastVideo);
+  }
+
+  $('langToggle').addEventListener('click', () => {
+    lang = lang === 'vi' ? 'en' : 'vi';
+    applyLang();
+  });
+
+  async function refresh() {
+    try {
+      const r = await fetch(withToken('/api/state'), { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = (await r.json()) as { video: VideoInfo };
+      lastVideo = d.video ?? { status: 'none' as const };
+      renderVideo(lastVideo);
+    } catch {
+      /* thử lại ở lần poll sau */
+    }
+  }
+
+  async function trigger(dry: boolean) {
+    await fetch(withToken(dry ? '/api/render?dry=1' : '/api/render'), { method: 'POST' });
+    lastVideo = { status: 'rendering' };
+    renderVideo(lastVideo);
+    refresh();
+  }
+
+  $('rerender').addEventListener('click', () => trigger(false));
+  $('dry').addEventListener('click', () => trigger(true));
+
+  applyLang();
+  refresh();
+  setInterval(refresh, 5000);
+</script>

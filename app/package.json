@@ -1,0 +1,17 @@
+{
+  "name": "clue-1m-sub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build",
+    "start": "node server.mjs",
+    "dev": "astro dev"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.2.2",
+    "astro": "^5.10.0",
+    "mysql2": "^3.14.0",
+    "playwright": "1.49.1"
+  }
+}

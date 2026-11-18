@@ -58,7 +58,7 @@ import Layout from '../layouts/Layout.astro';
     const s = S();
     $('err').hidden = true;
     if (v.status === 'done') {
-      setStatus('done', (v.dry ? 'DRY-RUN · ' : '') + 'MP4 · WebM');
+      setStatus('done', 'MP4 · WebM');
       $('dlMp4').hidden = false;
       $('dlWebm').hidden = false;
       $('dlMp4').href = withToken('/api/video?f=mp4');

@@ -7,7 +7,6 @@ import Layout from '../layouts/Layout.astro';
       <img class="clue-logo logo-md" src="/clueoj.svg" alt="" />
       
     </div>
-    <div class="dry-badge" id="dryBadge" hidden>DRY RUN</div>
 
     <div class="rp-head">
       <span class="live-chip"><span class="live-dot" aria-hidden="true"></span>LIVE</span>
@@ -30,8 +29,6 @@ import Layout from '../layouts/Layout.astro';
       <div class="mcard" id="mcard"></div>
     </div>
 
-    <div class="rp-progress" aria-hidden="true"><div id="rpBar"></div></div>
-    <canvas id="confetti"></canvas>
   </div>
 </Layout>
 
@@ -39,7 +36,6 @@ import Layout from '../layouts/Layout.astro';
   // Trang deterministic để Playwright quay: đọc window.__REPLAY do render.mjs
   // inject qua addInitScript, chạy đúng schedule, xong đặt window.__replayDone.
   import { createOdometer } from '../components/odometer';
-  import { startConfetti } from '../components/confetti';
   import { STR, fmt, fmtDate } from '../i18n';
   import type { Lang } from '../i18n';
 
@@ -77,10 +73,8 @@ import Layout from '../layouts/Layout.astro';
     const target = R.target;
     $('rkicker').textContent = S.site;
     $('rtitle').textContent = S.replayTitle;
-    $('rintroSub').textContent = S.subtitle;
     $('rsub').textContent = fmt(R.meta.startV, lang) + '  →  ' + fmt(target, lang);
     $('rpKicker').textContent = S.liveCount;
-    if (R.dry) $('dryBadge').hidden = false;
 
     const odo = createOdometer($('odometer'), { digits: 7, sep: lang === 'vi' ? '.' : ',' });
     odo.set(R.meta.startV);
@@ -116,7 +110,6 @@ import Layout from '../layouts/Layout.astro';
     let idx = 0;
     let introHidden = false;
     let finaleShown = false;
-    const rpBar = $('rpBar');
 
     function frame(now: number) {
       const t = now - t0;
@@ -133,11 +126,8 @@ import Layout from '../layouts/Layout.astro';
       if (!finaleShown && t >= R.timings.finaleStart) {
         finaleShown = true;
         $('finale').classList.add('show');
-        startConfetti($('confetti'), Math.max(2500, R.timings.finaleMs - 600));
       }
-      rpBar.style.transform = `scaleX(${Math.min(1, t / R.totalMs)})`;
       if (t >= R.totalMs) {
-        rpBar.style.transform = 'scaleX(1)';
         window.__replayDone = true; // recorder chờ flag này
         return;
       }

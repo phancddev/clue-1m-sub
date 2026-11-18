@@ -3,21 +3,21 @@
    Design system: CLUE OJ (#0d2033) + accent xanh #3c9eff
    ============================================================ */
 :root {
-  --bg: #0d2033;
-  --bg-deep: #091a2b;
-  --surface: #132d46;
-  --surface-2: #193953;
-  --raise: #214364;
-  --fg: #f1f1f1;
-  --muted: #b2c7db;
-  --faint: #90a9bf;
-  --accent: #3c9eff;
-  --accent-2: #80c3ff;
-  --border: #29465e;
-  --border-2: #395972;
+  --bg: #f4f8fc;
+  --bg-deep: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f8fc;
+  --raise: #e6eff7;
+  --fg: #132d46;
+  --muted: #456078;
+  --faint: #526e86;
+  --accent: #1469b8;
+  --accent-2: #125a99;
+  --border: #d6e3ef;
+  --border-2: #b9ccdf;
   --radius-lg: 20px;
   --radius: 14px;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -629,3 +629,24 @@ body.replay {
 }
 
 .stat .value.hot { color: #ffab70; }
+
+/* Live counter */
+main#main {
+  flex: 1;
+  margin: 68px auto 0;
+  padding: 4vh 0 12vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+}
+#main h1 { font-size: clamp(15px, 2vw, 23px); letter-spacing: .12em; color: var(--muted); }
+.odo { gap: .035em; padding: .22em .17em; border-block: 1px solid var(--border-2); }
+.odo-col { color: var(--fg); background: transparent; border: 0; box-shadow: none; }
+.odo-sep { color: var(--accent); }
+.odo::before, .odo::after, .replay-stage::after { display: none; }
+body.replay, .finale { background: var(--bg); }
+.replay-title, .finale-banner { background: none; color: var(--fg); text-shadow: none; }
+.finale.show .finale-banner { animation: none; }
+.mcard { background: var(--surface); border-color: var(--border); box-shadow: none; }
+.mcard b { color: var(--fg); }
+.finale-kicker, .mcard .k, .intro-kicker { color: var(--accent); }
